@@ -36,9 +36,16 @@ jobs:
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Configure Docker
-      run: gcloud auth configure-docker $REGISTRY_SERVER --quiet
-
+   # 1. АВТЕНТИФІКАЦІЯ ДЛЯ DOCKER PULL
+    # Використовуємо іншу дію, яка напряму логіниться в Docker, використовуючи Service Account Key
+    - name: Login to Artifact Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY_SERVER }}
+        username: _json_key
+        # Передаємо ключ SA як пароль для автентифікації
+        password: ${{ secrets.GCP_SA_KEY }}
+        
     # 2. Виконання CI-задачі, використовуючи ВАШ власний Docker-образ
     # Цей крок замінює використання стандартного образу Ubuntu.
     - name: Run Filename Check using Custom Docker Image
