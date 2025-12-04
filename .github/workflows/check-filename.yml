@@ -1,15 +1,13 @@
-# .github/workflows/check-filename.yml
+# .github/workflows/check-filename.yml (У devops-app-repo)
 
 name: Filename Check Pipeline
 
 on:
-  # Запускати при кожному push
   push:
     branches:
       - main
       - develop
       - feature/LAB-5_*
-  # Запускати при створенні Pull Request
   pull_request:
     branches:
       - main
@@ -29,21 +27,20 @@ jobs:
     - name: Checkout Repository Code
       uses: actions/checkout@v4
 
-    # 1. Явна Автентифікація Docker для Pull (Виправлення помилки)
+    # 1. ПРЯМА АВТЕНТИФІКАЦІЯ DOCKER (Виправлення помилки "Docker pull failed")
+    # Цей крок використовує ключ GCP SA для логіну в Docker
     - name: Login to Artifact Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY_SERVER }}
         username: _json_key
-        # Використовуємо ключ SA як "пароль" для автентифікації Docker
+        # Передаємо ключ SA як "пароль" для автентифікації Docker
         password: ${{ secrets.GCP_SA_KEY }}
 
     # 2. Виконання CI-задачі, використовуючи ВАШ власний Docker-образ
     - name: Run Filename Check using Custom Docker Image
-      # Повний тег вашого образу, який було успішно створено та завантажено
+      # Повний тег вашого образу, який ми успішно створили
       uses: docker://europe-west3-docker.pkg.dev/directed-cove-452818-r6/myroslavababiichuk09/ci-checker-image-myroslavababiichuk:0.1.0
       with:
-        # Використовуємо /bin/bash як точку входу
-        entrypoint: /bin/bash
-        # Запускаємо скрипт перевірки, використовуючи файли, викачані на кроці 'Checkout'
+        entrypoint: /bin/bash 
         args: checker-scripts/check-filename.sh
