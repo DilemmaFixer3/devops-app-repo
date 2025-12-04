@@ -1,4 +1,4 @@
-# .github/workflows/check-filename.yml (У devops-app-repo)
+# .github/workflows/check-filename.yml (Фінальна версія для devops-app-repo)
 
 name: Filename Check Pipeline
 
@@ -18,28 +18,30 @@ jobs:
   check-filename:
     runs-on: ubuntu-latest
     
-    # Змінні оточення для легкого доступу до Secrets
     env:
-      REGISTRY_SERVER: ${{ secrets.GCR_LOGIN_SERVER }} 
-      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGISTRY_SERVER: ${{ secrets.GCR_LOGIN_SERVER }} # europe-west3-docker.pkg.dev
       
     steps:
     - name: Checkout Repository Code
       uses: actions/checkout@v4
 
-    # 1. ПРЯМА АВТЕНТИФІКАЦІЯ DOCKER (Виправлення помилки "Docker pull failed")
-    # Цей крок використовує ключ GCP SA для логіну в Docker
-    - name: Login to Artifact Registry
-      uses: docker/login-action@v3
+    # 1. Автентифікація з GCP та отримання токену
+    # Ця дія встановлює credentials для gcloud
+    - name: Google Cloud Auth
+      uses: 'google-github-actions/auth@v2'
       with:
-        registry: ${{ env.REGISTRY_SERVER }}
-        username: _json_key
-        # Передаємо ключ SA як "пароль" для автентифікації Docker
-        password: ${{ secrets.GCP_SA_KEY }}
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    # 2. Виконання CI-задачі, використовуючи ВАШ власний Docker-образ
+    # 2. Налаштування Docker для використання gcloud (GCP Helper)
+    # Це є КРИТИЧНО важливим для коректного pull з AR
+    - name: Configure Docker to use Artifact Registry
+      run: |
+        # Встановлюємо gcloud як credential helper для Docker
+        gcloud auth configure-docker $REGISTRY_SERVER --quiet
+      
+    # 3. Виконання CI-задачі, використовуючи ВАШ власний Docker-образ
+    # uses: docker://... виконує pull на основі попередньо встановленої конфігурації Docker
     - name: Run Filename Check using Custom Docker Image
-      # Повний тег вашого образу, який ми успішно створили
       uses: docker://europe-west3-docker.pkg.dev/directed-cove-452818-r6/myroslavababiichuk09/ci-checker-image-myroslavababiichuk:0.1.0
       with:
         entrypoint: /bin/bash 
