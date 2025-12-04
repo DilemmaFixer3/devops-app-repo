@@ -1,0 +1,49 @@
+# .github/workflows/check-filename.yml
+
+name: Filename Check Pipeline
+
+on:
+  # Запускати при кожному push у головні та робочі гілки
+  push:
+    branches:
+      - main
+      - develop
+      - feature/LAB-5_*
+  # Запускати при створенні Pull Request
+  pull_request:
+    branches:
+      - main
+      - develop
+      - feature/LAB-5_*
+
+jobs:
+  check-filename:
+    runs-on: ubuntu-latest
+
+    # Змінні оточення для автентифікації pull
+    env:
+      REGISTRY_SERVER: ${{ secrets.GCR_LOGIN_SERVER }} # europe-west3-docker.pkg.dev
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }} 
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+    steps:
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    # 1. Автентифікація з GCP AR (потрібно, щоб завантажити приватний образ)
+    - name: GCP Auth (Pull image access)
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Configure Docker
+      run: gcloud auth configure-docker $REGISTRY_SERVER --quiet
+
+    # 2. Виконання CI-задачі, використовуючи ВАШ власний Docker-образ
+    # Цей крок замінює використання стандартного образу Ubuntu.
+    - name: Run Filename Check using Custom Docker Image
+      # Використовуємо docker:// для запуску завдань у кастомному образі
+      uses: docker://europe-west3-docker.pkg.dev/directed-cove-452818-r6/myroslavababiichuk09/ci-checker-image-myroslavababiichuk:0.1.0
+      with:
+        entrypoint: /bin/bash # Використовуємо bash як точку входу
+        args: checker-scripts/check-filename.sh # Запускаємо скрипт перевірки
